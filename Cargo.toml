@@ -1,0 +1,11 @@
+[package]
+name = "memstats"
+version = "0.1.0"
+authors = ["Ioannis Konstantelias <ikonstadel@gmail.com>"]
+
+[lib]
+name = "memstats"
+crate-type = ["dylib"]
+
+[dependencies]
+libc = "0.2"
