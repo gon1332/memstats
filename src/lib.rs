@@ -19,8 +19,9 @@ macro_rules! c_str {
 }
 
 
-type MallocFunc = extern "C" fn (size: size_t) -> *mut c_void;
-type FreeFunc   = extern "C" fn (ptr: *mut c_void);
+type MallocFunc  = extern "C" fn (size: size_t) -> *mut c_void;
+type FreeFunc    = extern "C" fn (ptr: *mut c_void);
+type ReallocFunc = extern "C" fn (ptr: *mut c_void, size: size_t) -> *mut c_void;
 
 
 macro_rules! real_malloc {
@@ -51,6 +52,21 @@ macro_rules! real_free {
 }
 
 
+macro_rules! real_realloc {
+    ($ptr:expr, $size:expr) => {
+        {
+            let fnptr = dlsym(RTLD_NEXT, c_str!("realloc")) as *const ();
+            if fnptr.is_null() {
+                panic!("dlsym failed");
+            }
+            let fnptr: ReallocFunc = transmute(fnptr);
+
+            fnptr($ptr, $size)
+        }
+    }
+}
+
+
 #[no_mangle]
 pub extern "C" fn malloc(size: size_t) -> *mut c_void {
     unsafe {
@@ -66,5 +82,15 @@ pub extern "C" fn free(ptr: *mut c_void) {
     unsafe {
         libc::write(1, c_str!("free\n") as *mut c_void, 5);
         real_free!(ptr);
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn realloc(ptr: *mut c_void, size: size_t) -> *mut c_void {
+    unsafe {
+        libc::write(1, c_str!("realloc\n") as *mut c_void, 8);
+        let addr = real_realloc!(ptr, size);
+        addr
     }
 }
